@@ -2,6 +2,7 @@ import type { LinksFunction, MetaFunction } from 'remix';
 import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from 'remix';
 import styles from './tailwind-o.css';
 
+// meta
 export const meta: MetaFunction = () => ({
   charset: 'utf-8',
   title: 'Uava',
