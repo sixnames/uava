@@ -1,0 +1,10 @@
+node_modules
+
+/.cache
+/.idea
+/build
+/api/index.js
+/public/build
+/app/tailwind-o.css
+.env
+.DS_Store
