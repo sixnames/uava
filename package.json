@@ -1,7 +1,7 @@
 {
-  "name": "remix-template-remix-ts",
+  "name": "uava",
   "private": true,
-  "description": "Resume for Slava Kirshman",
+  "description": "App for creation personal avatar with Ukrainian flag ring",
   "license": "MIT",
   "sideEffects": false,
   "scripts": {
