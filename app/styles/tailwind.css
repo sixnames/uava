@@ -6,4 +6,8 @@
   body {
     font-family: 'Helvetica', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   }
+  
+  html, body {
+    height: 100%;
+  }
 }
