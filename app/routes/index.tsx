@@ -25,12 +25,12 @@ export default function Index() {
   }, [file]);
 
   return (
-    <div className='flex min-h-screen flex-col items-center justify-center bg-gray-200 text-slate-900 dark:bg-gray-800 dark:text-white'>
+    <div className='flex min-h-screen min-w-[320px] flex-col items-center justify-center bg-gray-200 px-6 text-slate-900 dark:bg-gray-800 dark:text-white'>
       {/*title*/}
       <h1 className='mb-4 pt-24 text-2xl font-bold md:text-3xl'>UAVA</h1>
       <p>Russian warship, go f@ck yourself!</p>
 
-      <form id='form'>
+      <form className='flex flex-col items-center justify-center' id='form'>
         {/*ava preview*/}
         <div
           {...getRootProps()}
@@ -46,20 +46,36 @@ export default function Index() {
           />
           <input {...getInputProps()} />
         </div>
-      </form>
 
-      <div className='mt-8 h-12 pb-24'>
-        {/*remove uploaded avatar button*/}
-        {file && file.length > 0 ? (
-          <button
-            type='button'
-            onClick={() => setFile('')}
-            className='h-12 w-[180px] rounded bg-red-800 font-bold uppercase text-white'
-          >
-            Remove avatar
-          </button>
-        ) : null}
-      </div>
+        {/*controls*/}
+        <div className='mt-8 h-12 pb-24'>
+          {file && file.length > 0 ? (
+            <div className='flex flex-wrap items-center justify-center gap-4'>
+              {/*remove uploaded avatar button*/}
+              <button
+                type='button'
+                onClick={() => setFile('')}
+                className='h-12 w-[180px] rounded bg-red-800 font-bold uppercase text-white'
+              >
+                Remove avatar
+              </button>
+
+              {/*download generated avatar button*/}
+              <button
+                type='button'
+                className='h-12 w-[180px] rounded bg-yellow-300 font-bold uppercase text-blue-800'
+              >
+                Download avatar
+              </button>
+            </div>
+          ) : (
+            /*hint*/
+            <div className='flex h-12 items-center text-center'>
+              <span>Click on avatar preview or drag and drop your photo</span>
+            </div>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
