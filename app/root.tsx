@@ -1,6 +1,7 @@
 import type { LinksFunction, MetaFunction } from 'remix';
 import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from 'remix';
 import styles from './tailwind-o.css';
+import cropStyles from 'react-image-crop/dist/ReactCrop.css';
 
 // meta
 export const meta: MetaFunction = () => ({
@@ -14,6 +15,10 @@ export const links: LinksFunction = () => {
     {
       rel: 'stylesheet',
       href: styles,
+    },
+    {
+      rel: 'stylesheet',
+      href: cropStyles,
     },
   ];
 };
