@@ -67,7 +67,11 @@ export async function uploadStreamToCloudinary(
     .toFormat('png')
     .toBuffer();
 
+  console.log('avaBuffer', avaBuffer);
+
   // composite the avatar image with the ua flag
+  console.log(`${cwd}/public/ua-flag.png`);
+
   const transform = await sharp(`${cwd}/public/ua-flag.png`)
     .resize(256, 256)
     .composite([
@@ -84,15 +88,11 @@ export async function uploadStreamToCloudinary(
     ])
     .toFormat('png')
     .toBuffer();
+  console.log('transform', transform);
 
   // get stream from composite image
   const transformedStream = Readable.from(transform);
-
-  console.log({
-    transform,
-    avaBuffer,
-    transformedStream,
-  });
+  console.log('transformedStream', transformedStream);
 
   // upload the stream to cloudinary
   return new Promise((resolve, reject) => {
