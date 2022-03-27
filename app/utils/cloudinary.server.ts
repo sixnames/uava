@@ -46,6 +46,7 @@ export async function uploadStreamToCloudinary(
 
   // get the buffer from the stream
   const buffer = await streamToBuffer(stream);
+  console.log('buffer', buffer, buffer.length);
 
   // create a sharp image from the avatar buffer
   const avaBuffer = await sharp(buffer)
