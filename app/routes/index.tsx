@@ -1,8 +1,9 @@
 import * as React from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import { Form } from '@remix-run/react';
-import { ActionFunction, redirect, unstable_parseMultipartFormData, UploadHandler } from 'remix';
+import { ActionFunction, redirect, UploadHandler } from 'remix';
 import { uploadStreamToCloudinary } from '../utils/cloudinary.server';
+import { parseMultipartFormData } from '@remix-run/node/parseMultipartFormData';
 
 const defaultCropSize = 50;
 const defaultCrop: PixelCrop = {
@@ -27,20 +28,22 @@ const defaultSizes: Sizes = {
 
 export const action: ActionFunction = async ({ request }) => {
   const uploadHandler: UploadHandler = async ({ name, stream }) => {
-    console.log('name', name);
     if (name !== 'file') {
       stream.resume();
       return;
     }
-    const uploadedImage = await uploadStreamToCloudinary(stream);
-    console.log(uploadedImage);
-    return uploadedImage.secure_url;
+    const uploadedImage = await uploadStreamToCloudinary(stream, {
+      width: 236,
+      height: 236,
+      x: 100,
+      y: 100,
+    });
+    return uploadedImage.url;
   };
 
-  const formData = await unstable_parseMultipartFormData(request, uploadHandler);
+  const formData = await parseMultipartFormData(request, uploadHandler);
   const file = formData.get('file');
 
-  console.log('formData', formData);
   console.log('file', file);
 
   return redirect('/');
@@ -133,17 +136,13 @@ export default function Index() {
   }, [completedCrop, previewSizes]);
 
   return (
-    <div className='flex flex-col items-center justify-center bg-gray-200 px-6 py-24 text-slate-900 dark:bg-gray-800 dark:text-white'>
-      <div className='mx-auto flex min-h-screen min-w-[320px] max-w-[480px] flex-col items-center justify-center'>
+    <div className='flex flex-col items-center bg-gray-200 px-6 py-24 text-slate-900 dark:bg-gray-800 dark:text-white'>
+      <div className='mx-auto flex min-h-screen min-w-[320px] max-w-[480px] flex-col items-center'>
         {/*title*/}
         <h1 className='mb-4 text-2xl font-bold md:text-3xl'>UAVA</h1>
         <p>Russian warship, go f@ck yourself!</p>
 
-        <Form
-          className='flex flex-col items-center justify-center'
-          encType='multipart/form-data'
-          method='post'
-        >
+        <Form className='flex flex-col items-center' encType='multipart/form-data' method='post'>
           {/*crop*/}
           {/*TODO input refs*/}
           {/*<input type={'hidden'} value={completedCrop?.height} name={'height'} />*/}
