@@ -38,7 +38,7 @@ export const action: ActionFunction = async ({ request }) => {
       x: 100,
       y: 100,
     });
-    return uploadedImage.url;
+    return uploadedImage?.url;
   };
 
   const formData = await parseMultipartFormData(request, uploadHandler);
