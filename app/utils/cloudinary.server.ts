@@ -87,6 +87,12 @@ export async function uploadStreamToCloudinary(
   // get stream from composite image
   const transformedStream = Readable.from(transform);
 
+  console.log({
+    transform,
+    avaBuffer,
+    transformedStream,
+  });
+
   // upload the stream to cloudinary
   return new Promise((resolve, reject) => {
     // upload the stream to cloudinary
