@@ -1,7 +1,6 @@
 import cloudinary, { UploadApiResponse } from 'cloudinary';
 import { Readable, Stream } from 'stream';
 import sharp from 'sharp';
-import mkdirp from 'mkdirp';
 
 const getCircleMask = (size: number) => {
   const radius = size / 2;
@@ -44,8 +43,6 @@ export async function uploadStreamToCloudinary(
   options: UploadStreamToCloudinaryOptionsInterface,
 ): Promise<UploadApiResponse | null> {
   const cwd = process.cwd();
-  const imagesPath = `${cwd}/public/images`;
-  await mkdirp(imagesPath);
 
   // get the buffer from the stream
   const buffer = await streamToBuffer(stream);
