@@ -8,4 +8,4 @@ node_modules
 /app/tailwind-o.css
 .env
 .DS_Store
-/assets
+/public/images

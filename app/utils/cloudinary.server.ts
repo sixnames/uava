@@ -1,6 +1,14 @@
-import cloudinary from 'cloudinary';
+import cloudinary, { UploadApiResponse } from 'cloudinary';
 import { Readable, Stream } from 'stream';
 import sharp from 'sharp';
+import mkdirp from 'mkdirp';
+
+const getCircleMask = (size: number) => {
+  const radius = size / 2;
+  return new Buffer(
+    `<svg width='${size}' height='${size}'><circle cx='${radius}' cy='${radius}' r='${radius}'/></svg>`,
+  );
+};
 
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -24,60 +32,79 @@ interface UploadStreamToCloudinaryOptionsInterface {
   y: number;
 }
 
-interface UploadStreamToCloudinaryPayloadInterface {
-  url: string;
-  publicId: string;
-}
+const test = {
+  height: Math.floor(1084.2243154005948),
+  width: Math.floor(1084.2243154005948),
+  left: Math.floor(432.8524644176553),
+  top: Math.floor(90.30432456052212),
+};
 
 export async function uploadStreamToCloudinary(
   stream: Readable,
   options: UploadStreamToCloudinaryOptionsInterface,
-): Promise<UploadStreamToCloudinaryPayloadInterface> {
+): Promise<UploadApiResponse | null> {
+  const cwd = process.cwd();
+  const imagesPath = `${cwd}/public/images`;
+  await mkdirp(imagesPath);
+
+  // get the buffer from the stream
   const buffer = await streamToBuffer(stream);
-  const transform = await sharp(buffer)
-    // .resize(options.width, options.height)
+
+  // create a sharp image from the avatar buffer
+  const avaBuffer = await sharp(buffer)
+    .resize(test.width, test.height)
     .extract({
+      left: test.left,
+      top: test.top,
       width: 236,
       height: 236,
-      left: 1,
-      top: 1,
-      // left: options.x,
-      // top: options.y,
     })
-    .resize(236, 236)
+    .composite([
+      {
+        input: getCircleMask(236),
+        gravity: 'center',
+        blend: 'dest-in',
+      },
+    ])
     .toFormat('png')
     .toBuffer();
 
+  // composite the avatar image with the ua flag
+  const transform = await sharp(`${cwd}/public/ua-flag.png`)
+    .resize(256, 256)
+    .composite([
+      {
+        input: getCircleMask(256),
+        gravity: 'center',
+        blend: 'dest-in',
+      },
+      {
+        input: avaBuffer,
+        gravity: 'center',
+        blend: 'over',
+      },
+    ])
+    .toFormat('png')
+    .toBuffer();
+
+  // get stream from composite image
   const transformedStream = Readable.from(transform);
 
+  // upload the stream to cloudinary
   return new Promise((resolve, reject) => {
     // upload the stream to cloudinary
-    const uploader = cloudinary.v2.uploader.upload_stream({}, (error, result) => {
-      if (result) {
-        // generate an avatar
-        const url = cloudinary.v2.url('ua-flag.png', {
-          secure: true,
-          width: 256,
-          height: 256,
-          radius: 'max',
-          transformation: [
-            {
-              overlay: result.public_id,
-              width: options.width,
-              opacity: options.height,
-              radius: 'max',
-            },
-          ],
-        });
-
-        resolve({
-          url,
-          publicId: result.public_id,
-        });
-      } else {
-        reject(error);
-      }
-    });
+    const uploader = cloudinary.v2.uploader.upload_stream(
+      {
+        secure: true,
+      },
+      (error, result) => {
+        if (result) {
+          resolve(result);
+        } else {
+          reject(null);
+        }
+      },
+    );
 
     transformedStream.pipe(uploader);
   });
