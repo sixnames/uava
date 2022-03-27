@@ -4,7 +4,7 @@ import sharp from 'sharp';
 
 const getCircleMask = (size: number) => {
   const radius = size / 2;
-  return new Buffer(
+  return Buffer.from(
     `<svg width='${size}' height='${size}'><circle cx='${radius}' cy='${radius}' r='${radius}'/></svg>`,
   );
 };
