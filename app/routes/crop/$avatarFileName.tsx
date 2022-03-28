@@ -9,7 +9,8 @@ import {
 } from '../../utils/cloudinary.server';
 import { avaSize, defaultCropSize } from '../../configs/common';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
-import { Form } from '@remix-run/react';
+import { Form, useTransition } from '@remix-run/react';
+import AvaPreview from '../../components/AvaPreview';
 
 const defaultCrop: PixelCrop = {
   unit: 'px',
@@ -68,12 +69,15 @@ export const action: ActionFunction = async ({ request, params }) => {
     avatarFileName,
   });
 
-  console.log(generatedAvatarResult?.url);
+  if (generatedAvatarResult) {
+    return redirect(`/download?url=${encodeURIComponent(generatedAvatarResult.secure_url)}`);
+  }
 
-  return {};
+  return redirect(request.url);
 };
 
 const CropRoute = () => {
+  const transition = useTransition();
   const { imageUrl, avatarFileName } = useLoaderData<CropRouteDataInterface>();
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
@@ -168,45 +172,56 @@ const CropRoute = () => {
         </div>
 
         {/*ava preview*/}
-        <div className='relative mt-8 h-[256px] w-[256px] overflow-hidden rounded-full shadow-lg dark:shadow-2xl'>
-          <img src='/ua-flag.png' width='256' height='256' alt='ukraine flag' />
-
-          <div className='absolute top-[10px] left-[10px] h-[236px] w-[236px] cursor-pointer overflow-hidden rounded-full'>
-            <img
-              id='preview'
-              src={imageUrl}
-              width={avaSize}
-              height={avaSize}
-              alt='ava preview'
-              style={avaPreviewStyles}
-            />
-          </div>
-        </div>
+        <AvaPreview>
+          <img
+            id='preview'
+            src={imageUrl}
+            width={avaSize}
+            height={avaSize}
+            alt='ava preview'
+            style={avaPreviewStyles}
+          />
+        </AvaPreview>
       </Form>
 
       {/*controls*/}
       <div className='mt-8 h-12'>
         <div className='flex flex-wrap items-center justify-center gap-4'>
-          {/*remove uploaded avatar button*/}
-          <Form id={'clear'} method={'delete'}>
-            <button
-              form={'clear'}
-              type='submit'
-              formMethod='DELETE'
-              className='h-12 w-[180px] rounded bg-red-800 font-bold uppercase text-white'
-            >
-              Go back
-            </button>
-          </Form>
+          {transition.submission?.method === 'DELETE' ? (
+            <div>Removing image...</div>
+          ) : transition.submission?.method === 'POST' ? (
+            <div>
+              <div className='text-center'>
+                <div className='text-xl'>Generating avatar...</div>
+                <div>Please wait</div>
+              </div>
+            </div>
+          ) : (
+            <React.Fragment>
+              {/*remove uploaded avatar button*/}
+              <Form id={'clear'} method={'delete'}>
+                <button
+                  disabled={transition.state === 'submitting'}
+                  form={'clear'}
+                  type='submit'
+                  formMethod='DELETE'
+                  className='h-12 w-[180px] rounded bg-red-800 font-bold text-white disabled:bg-gray-700 disabled:text-white disabled:opacity-80'
+                >
+                  Go back
+                </button>
+              </Form>
 
-          {/*download generated avatar button*/}
-          <button
-            form={'generate'}
-            type='submit'
-            className='h-12 w-[180px] rounded bg-yellow-300 font-bold uppercase text-blue-800'
-          >
-            Download avatar
-          </button>
+              {/*generate avatar button*/}
+              <button
+                disabled={transition.state === 'submitting'}
+                form={'generate'}
+                type='submit'
+                className='h-12 w-[180px] rounded bg-yellow-300 font-bold text-blue-800 disabled:bg-gray-700 disabled:text-white disabled:opacity-80'
+              >
+                Generate avatar
+              </button>
+            </React.Fragment>
+          )}
         </div>
       </div>
     </Layout>
