@@ -1,11 +1,26 @@
 import cloudinary, { UploadApiResponse } from 'cloudinary';
 import { Readable, Stream } from 'stream';
 import sharp from 'sharp';
-import mkdirp from 'mkdirp';
+import https from 'https';
+
+async function getBufferFromUrl(url: string): Promise<Buffer> {
+  return new Promise((resolve) => {
+    https.get(url, (response) => {
+      const body: Buffer[] = [];
+      response
+        .on('data', (chunk: Buffer) => {
+          body.push(chunk);
+        })
+        .on('end', () => {
+          resolve(Buffer.concat(body));
+        });
+    });
+  });
+}
 
 const getCircleMask = (size: number) => {
   const radius = size / 2;
-  return new Buffer(
+  return Buffer.from(
     `<svg width='${size}' height='${size}'><circle cx='${radius}' cy='${radius}' r='${radius}'/></svg>`,
   );
 };
@@ -43,10 +58,6 @@ export async function uploadStreamToCloudinary(
   stream: Readable,
   options: UploadStreamToCloudinaryOptionsInterface,
 ): Promise<UploadApiResponse | null> {
-  const cwd = process.cwd();
-  const imagesPath = `${cwd}/public/images`;
-  await mkdirp(imagesPath);
-
   // get the buffer from the stream
   const buffer = await streamToBuffer(stream);
 
@@ -69,8 +80,13 @@ export async function uploadStreamToCloudinary(
     .toFormat('png')
     .toBuffer();
 
+  const flagUrl = await cloudinary.v2.url('ua-flag.png', {
+    secure: true,
+  });
+  const flagBuffer = await getBufferFromUrl(flagUrl);
+
   // composite the avatar image with the ua flag
-  const transform = await sharp(`${cwd}/public/ua-flag.png`)
+  const transform = await sharp(flagBuffer)
     .resize(256, 256)
     .composite([
       {
