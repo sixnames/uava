@@ -30,12 +30,7 @@ export const action: ActionFunction = async ({ request }) => {
       stream.resume();
       return;
     }
-    const uploadedImage = await uploadStreamToCloudinary(stream, {
-      width: avaSize,
-      height: avaSize,
-      x: 100,
-      y: 100,
-    });
+    const uploadedImage = await uploadStreamToCloudinary(stream);
     return uploadedImage?.url;
   };
 

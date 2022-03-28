@@ -2,6 +2,24 @@ import * as React from 'react';
 import Layout from '../components/Layout';
 import { Form } from '@remix-run/react';
 import { avaSize } from '../configs/common';
+import { ActionFunction, redirect, UploadHandler } from 'remix';
+import { uploadStreamToCloudinary } from '../utils/cloudinary.server';
+import { parseMultipartFormData } from '@remix-run/node/parseMultipartFormData';
+
+export const action: ActionFunction = async ({ request }) => {
+  const uploadHandler: UploadHandler = async ({ name, stream }) => {
+    if (name !== 'file') {
+      stream.resume();
+      return;
+    }
+    const uploadedImage = await uploadStreamToCloudinary(stream);
+    return uploadedImage?.public_id;
+  };
+
+  const formData = await parseMultipartFormData(request, uploadHandler);
+  const avatarPublicId = formData.get('file');
+  return redirect(`/crop/${avatarPublicId}`);
+};
 
 export default function Upload() {
   const [srcImg, setSrcImg] = React.useState<string>('');
@@ -23,8 +41,8 @@ export default function Upload() {
     if (files && files[0]) {
       const file = files[0];
       const src = URL.createObjectURL(file);
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
+      // const reader = new FileReader();
+      // reader.readAsDataURL(file);
       setSrcImg(src);
     }
   };
@@ -32,7 +50,7 @@ export default function Upload() {
   return (
     <Layout>
       <Form className='flex flex-col items-center' encType='multipart/form-data' method='post'>
-        <div className='relative mt-12'>
+        <div className='mt-12'>
           {isPreviewLoaded ? (
             <React.Fragment>
               <img
@@ -67,21 +85,21 @@ export default function Upload() {
                 </div>
               </div>
             </React.Fragment>
-          ) : (
-            <React.Fragment>
-              <input
-                id='file'
-                name='file'
-                type='file'
-                accept='image/jpeg,image/png,image/jpg,image/webp,image/avif'
-                className='absolute inset-0 z-20 block h-full w-full cursor-pointer opacity-0'
-                onChange={uploadHandler}
-              />
-              <div className='z-10 block flex h-12 items-center justify-center rounded-lg bg-yellow-300 px-8 font-bold text-blue-800'>
-                Click to upload an image
-              </div>
-            </React.Fragment>
-          )}
+          ) : null}
+
+          <div className={isPreviewLoaded ? 'relative opacity-0' : 'relative'}>
+            <input
+              id='file'
+              name='file'
+              type='file'
+              accept='image/jpeg,image/png,image/jpg,image/webp,image/avif'
+              className='absolute inset-0 z-20 block h-full w-full cursor-pointer opacity-0'
+              onChange={uploadHandler}
+            />
+            <div className='z-10 block flex h-12 items-center justify-center rounded-lg bg-yellow-300 px-8 font-bold text-blue-800'>
+              Click to upload an image
+            </div>
+          </div>
         </div>
       </Form>
     </Layout>
