@@ -1,7 +1,8 @@
 import * as React from 'react';
 import Layout from '../../components/Layout';
-import { ActionFunction, LoaderFunction, useLoaderData } from 'remix';
+import { ActionFunction, LoaderFunction, redirect, useLoaderData } from 'remix';
 import {
+  deleteFromCloudinary,
   generateAvatar,
   GenerateAvatarOptionsInterface,
   getCloudinaryImageUrl,
@@ -44,14 +45,22 @@ export const loader: LoaderFunction = async ({ params }) => {
   return data;
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, params }) => {
+  const avatarFileName = `${params.avatarFileName}`;
   const formData = await request.formData();
   const x = formData.get('x') as string;
   const y = formData.get('y') as string;
   const width = formData.get('width') as string;
   const height = formData.get('height') as string;
-  const avatarFileName = formData.get('avatarFileName') as string;
-  const avatarUrl = await generateAvatar({
+
+  // delete uploaded image from cloudinary
+  if (request.method === 'DELETE') {
+    await deleteFromCloudinary(avatarFileName);
+    return redirect(`/upload`);
+  }
+
+  // generate new avatar
+  const generatedAvatarResult = await generateAvatar({
     x: parseInt(x, 10),
     y: parseInt(y, 10),
     width: parseInt(width, 10),
@@ -59,7 +68,7 @@ export const action: ActionFunction = async ({ request }) => {
     avatarFileName,
   });
 
-  console.log(avatarUrl?.url);
+  console.log(generatedAvatarResult?.url);
 
   return {};
 };
@@ -134,10 +143,13 @@ const CropRoute = () => {
 
   return (
     <Layout>
-      <Form className='flex flex-col items-center' encType='multipart/form-data' method='post'>
+      <Form
+        id='generate'
+        className='flex flex-col items-center'
+        encType='multipart/form-data'
+        method='post'
+      >
         {/*crop*/}
-        {/*TODO input refs*/}
-        <input type={'hidden'} value={params.avatarFileName} name={'avatarFileName'} />
         <input type={'hidden'} value={params.x} name={'x'} />
         <input type={'hidden'} value={params.y} name={'y'} />
         <input type={'hidden'} value={params.width} name={'width'} />
@@ -170,32 +182,33 @@ const CropRoute = () => {
             />
           </div>
         </div>
+      </Form>
 
-        {/*controls*/}
-        <div className='mt-8 h-12'>
-          <div className='flex flex-wrap items-center justify-center gap-4'>
-            {/*remove uploaded avatar button*/}
+      {/*controls*/}
+      <div className='mt-8 h-12'>
+        <div className='flex flex-wrap items-center justify-center gap-4'>
+          {/*remove uploaded avatar button*/}
+          <Form id={'clear'} method={'delete'}>
             <button
-              type='button'
-              onClick={() => {
-                // TODO remove uploaded avatar
-                console.log('back');
-              }}
+              form={'clear'}
+              type='submit'
+              formMethod='DELETE'
               className='h-12 w-[180px] rounded bg-red-800 font-bold uppercase text-white'
             >
-              Remove avatar
+              Go back
             </button>
+          </Form>
 
-            {/*download generated avatar button*/}
-            <button
-              type='submit'
-              className='h-12 w-[180px] rounded bg-yellow-300 font-bold uppercase text-blue-800'
-            >
-              Download avatar
-            </button>
-          </div>
+          {/*download generated avatar button*/}
+          <button
+            form={'generate'}
+            type='submit'
+            className='h-12 w-[180px] rounded bg-yellow-300 font-bold uppercase text-blue-800'
+          >
+            Download avatar
+          </button>
         </div>
-      </Form>
+      </div>
     </Layout>
   );
 };

@@ -55,6 +55,16 @@ export async function uploadStreamToCloudinary(
   });
 }
 
+export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
+  try {
+    const removeResult = await cloudinary.v2.uploader.destroy(publicId);
+    return removeResult.result === 'ok';
+  } catch (error) {
+    console.log('deleteFromCloudinary error', error);
+    return false;
+  }
+}
+
 export async function getCloudinaryImageUrl(imageId: string): Promise<string> {
   return cloudinary.v2.url(imageId, {
     secure: true,
