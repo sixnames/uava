@@ -1,12 +1,7 @@
 import * as React from 'react';
 import Layout from '../../components/Layout';
 import { ActionFunction, LoaderFunction, redirect, useLoaderData } from 'remix';
-import {
-  deleteFromCloudinary,
-  generateAvatar,
-  GenerateAvatarOptionsInterface,
-  getCloudinaryImageUrl,
-} from '../../utils/cloudinary.server';
+import { deleteFromCloudinary, getCloudinaryImageUrl } from '../../utils/cloudinary.server';
 import { avaSize, defaultCropSize } from '../../configs/common';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import { Form, useTransition } from '@remix-run/react';
@@ -46,34 +41,11 @@ export const loader: LoaderFunction = async ({ params }) => {
   return data;
 };
 
-export const action: ActionFunction = async ({ request, params }) => {
+export const action: ActionFunction = async ({ params }) => {
   const avatarFileName = `${params.avatarFileName}`;
-  const formData = await request.formData();
-  const x = formData.get('x') as string;
-  const y = formData.get('y') as string;
-  const width = formData.get('width') as string;
-  const height = formData.get('height') as string;
-
   // delete uploaded image from cloudinary
-  if (request.method === 'DELETE') {
-    await deleteFromCloudinary(avatarFileName);
-    return redirect(`/upload`);
-  }
-
-  // generate new avatar
-  const generatedAvatarResult = await generateAvatar({
-    x: parseInt(x, 10),
-    y: parseInt(y, 10),
-    width: parseInt(width, 10),
-    height: parseInt(height, 10),
-    avatarFileName,
-  });
-
-  if (generatedAvatarResult) {
-    return redirect(`/download?url=${encodeURIComponent(generatedAvatarResult.secure_url)}`);
-  }
-
-  return redirect(request.url);
+  await deleteFromCloudinary(avatarFileName);
+  return redirect(`/upload`);
 };
 
 const CropRoute = () => {
@@ -82,13 +54,25 @@ const CropRoute = () => {
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
   const [previewSizes, setPreviewSizes] = React.useState<Sizes>(defaultSizes);
-  const [params, setParams] = React.useState<GenerateAvatarOptionsInterface>({
-    avatarFileName,
-    width: avaSize,
-    height: avaSize,
-    x: 0,
-    y: 0,
-  });
+  const [downloadUrl, setDownloadUrl] = React.useState<string>('');
+
+  // set initial state on image load
+  React.useEffect(() => {
+    const image = new Image();
+    image.src = imageUrl;
+    image.onload = () => {
+      const cropImage = document.querySelector('#crop-image');
+      if (cropImage) {
+        const cropImageRect = cropImage.getBoundingClientRect();
+        setPreviewSizes({
+          width: cropImageRect.width,
+          height: cropImageRect.height,
+        });
+      }
+      setCrop(defaultCrop);
+      setCompletedCrop(defaultCrop);
+    };
+  }, [imageUrl]);
 
   // get preview styles
   const avaPreviewStyles = React.useMemo<React.CSSProperties>(() => {
@@ -105,17 +89,13 @@ const CropRoute = () => {
     // count preview crop position
     const positionX = (cropPositionX * imageWidth) / previewSizes.width;
     const positionY = (cropPositionY * imageHeight) / previewSizes.height;
-    const top = positionY === 0 ? 0 : `-${positionY}px`;
     const left = positionX === 0 ? 0 : `-${positionX}px`;
+    const top = positionY === 0 ? 0 : `-${positionY}px`;
 
-    // set params for next crop
-    setParams((prevParams) => ({
-      ...prevParams,
-      width: imageWidth,
-      height: imageHeight,
-      x: positionX,
-      y: positionY,
-    }));
+    // set download url
+    setDownloadUrl(
+      `/crop/${avatarFileName}.png?x=${positionX}&y=${positionY}&width=${imageWidth}&height=${imageHeight}`,
+    );
 
     return {
       position: 'absolute',
@@ -127,38 +107,11 @@ const CropRoute = () => {
       minWidth: imageWidth,
       minHeight: imageHeight,
     };
-  }, [completedCrop, previewSizes]);
-
-  React.useEffect(() => {
-    const image = new Image();
-    image.src = imageUrl;
-    image.onload = () => {
-      const width = image.width;
-      const height = image.height;
-      const sizes = {
-        width,
-        height,
-      };
-      setPreviewSizes(sizes);
-      setCrop(defaultCrop);
-      setCompletedCrop(defaultCrop);
-    };
-  }, [imageUrl]);
+  }, [avatarFileName, completedCrop, previewSizes]);
 
   return (
     <Layout>
-      <Form
-        id='generate'
-        className='flex flex-col items-center'
-        encType='multipart/form-data'
-        method='post'
-      >
-        {/*crop*/}
-        <input type={'hidden'} value={params.x} name={'x'} />
-        <input type={'hidden'} value={params.y} name={'y'} />
-        <input type={'hidden'} value={params.width} name={'width'} />
-        <input type={'hidden'} value={params.height} name={'height'} />
-
+      <div className='flex flex-col items-center'>
         {/*crop*/}
         <div className='mt-8'>
           <ReactCrop
@@ -173,16 +126,9 @@ const CropRoute = () => {
 
         {/*ava preview*/}
         <AvaPreview>
-          <img
-            id='preview'
-            src={imageUrl}
-            width={avaSize}
-            height={avaSize}
-            alt='ava preview'
-            style={avaPreviewStyles}
-          />
+          <img id='preview' src={imageUrl} alt='ava preview' style={avaPreviewStyles} />
         </AvaPreview>
-      </Form>
+      </div>
 
       {/*controls*/}
       <div className='mt-8 h-12'>
@@ -199,13 +145,10 @@ const CropRoute = () => {
           ) : (
             <React.Fragment>
               {/*remove uploaded avatar button*/}
-              <Form id={'clear'} method={'delete'}>
+              <Form method='post'>
                 <button
-                  disabled={transition.state === 'submitting'}
-                  form={'clear'}
                   type='submit'
-                  formMethod='DELETE'
-                  className='h-12 w-[180px] rounded bg-red-800 font-bold text-white disabled:bg-gray-700 disabled:text-white disabled:opacity-80'
+                  className='h-12 w-[180px] rounded bg-red-800 font-bold text-white'
                 >
                   Go back
                 </button>
@@ -213,12 +156,14 @@ const CropRoute = () => {
 
               {/*generate avatar button*/}
               <button
-                disabled={transition.state === 'submitting'}
-                form={'generate'}
-                type='submit'
-                className='h-12 w-[180px] rounded bg-yellow-300 font-bold text-blue-800 disabled:bg-gray-700 disabled:text-white disabled:opacity-80'
+                type='button'
+                className='flex h-12 w-[180px] items-center justify-center rounded bg-yellow-300 font-bold text-blue-800'
+                onClick={() => {
+                  window.open(downloadUrl, '_blank');
+                  window.location.href = '/upload';
+                }}
               >
-                Generate avatar
+                Download avatar
               </button>
             </React.Fragment>
           )}
