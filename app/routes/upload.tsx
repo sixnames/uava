@@ -4,6 +4,7 @@ import { Form, useSubmit, useTransition } from '@remix-run/react';
 import { ActionFunction, redirect, UploadHandler } from 'remix';
 import { uploadStreamToCloudinary } from '../utils/cloudinary.server';
 import { parseMultipartFormData } from '@remix-run/node/parseMultipartFormData';
+import AvaPreview from '../components/AvaPreview';
 
 export const action: ActionFunction = async ({ request }) => {
   const uploadHandler: UploadHandler = async ({ name, stream }) => {
@@ -37,6 +38,8 @@ export default function Upload() {
         method='post'
         onChange={handleChange}
       >
+        <AvaPreview />
+
         <div className='mt-12'>
           {transition.state === 'submitting' ? (
             <div>
@@ -46,7 +49,7 @@ export default function Upload() {
               </div>
             </div>
           ) : (
-            <div className='relative'>
+            <div className='relative cursor-pointer'>
               <input
                 id='file'
                 name='file'

@@ -5,7 +5,6 @@ import { deleteFromCloudinary, getCloudinaryImageUrl } from '../../utils/cloudin
 import { avaSize, defaultCropSize } from '../../configs/common';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import { Form, useTransition } from '@remix-run/react';
-import AvaPreview from '../../components/AvaPreview';
 
 const defaultCrop: PixelCrop = {
   unit: 'px',
@@ -74,8 +73,8 @@ const CropRoute = () => {
     };
   }, [imageUrl]);
 
-  // get preview styles
-  const avaPreviewStyles = React.useMemo<React.CSSProperties>(() => {
+  // get download url
+  React.useEffect(() => {
     // get initial values
     const cropWidth = completedCrop?.width || defaultCrop.width;
     const cropHeight = completedCrop?.height || defaultCrop.height;
@@ -89,31 +88,17 @@ const CropRoute = () => {
     // count preview crop position
     const positionX = (cropPositionX * imageWidth) / previewSizes.width;
     const positionY = (cropPositionY * imageHeight) / previewSizes.height;
-    const left = positionX === 0 ? 0 : `-${positionX}px`;
-    const top = positionY === 0 ? 0 : `-${positionY}px`;
 
     // set download url
-    setDownloadUrl(
-      `/crop/${avatarFileName}.png?x=${positionX}&y=${positionY}&width=${imageWidth}&height=${imageHeight}`,
-    );
-
-    return {
-      position: 'absolute',
-      display: 'block',
-      top,
-      left,
-      width: imageWidth,
-      height: imageHeight,
-      minWidth: imageWidth,
-      minHeight: imageHeight,
-    };
+    const queryParams = `x=${positionX}&y=${positionY}&width=${imageWidth}&height=${imageHeight}`;
+    setDownloadUrl(`/crop/${avatarFileName}.png?${queryParams}`);
   }, [avatarFileName, completedCrop, previewSizes]);
 
   return (
     <Layout>
-      <div className='flex flex-col items-center'>
+      <div className='relative'>
         {/*crop*/}
-        <div className='mt-8'>
+        <div className='mt-8 pb-4'>
           <ReactCrop
             aspect={1}
             crop={crop}
@@ -124,49 +109,44 @@ const CropRoute = () => {
           </ReactCrop>
         </div>
 
-        {/*ava preview*/}
-        <AvaPreview>
-          <img id='preview' src={imageUrl} alt='ava preview' style={avaPreviewStyles} />
-        </AvaPreview>
-      </div>
-
-      {/*controls*/}
-      <div className='mt-8 h-12'>
-        <div className='flex flex-wrap items-center justify-center gap-4'>
-          {transition.submission?.method === 'DELETE' ? (
-            <div>Removing image...</div>
-          ) : transition.submission?.method === 'POST' ? (
-            <div>
-              <div className='text-center'>
-                <div className='text-xl'>Generating avatar...</div>
-                <div>Please wait</div>
+        {/*controls*/}
+        <div className='sticky left-0 bottom-0 bg-gray-200 py-4 dark:bg-gray-800'>
+          <div className='flex flex-wrap items-center justify-center gap-4'>
+            {transition.submission?.method === 'DELETE' ? (
+              <div>Removing image...</div>
+            ) : transition.submission?.method === 'POST' ? (
+              <div>
+                <div className='text-center'>
+                  <div className='text-xl'>Generating avatar...</div>
+                  <div>Please wait</div>
+                </div>
               </div>
-            </div>
-          ) : (
-            <React.Fragment>
-              {/*remove uploaded avatar button*/}
-              <Form method='post'>
-                <button
-                  type='submit'
-                  className='h-12 w-[180px] rounded bg-red-800 font-bold text-white'
-                >
-                  Go back
-                </button>
-              </Form>
+            ) : (
+              <React.Fragment>
+                {/*remove uploaded avatar button*/}
+                <Form method='post'>
+                  <button
+                    type='submit'
+                    className='h-12 w-[180px] rounded bg-red-800 font-bold text-white'
+                  >
+                    Go back
+                  </button>
+                </Form>
 
-              {/*generate avatar button*/}
-              <button
-                type='button'
-                className='flex h-12 w-[180px] items-center justify-center rounded bg-yellow-300 font-bold text-blue-800'
-                onClick={() => {
-                  window.open(downloadUrl, '_blank');
-                  window.location.href = '/upload';
-                }}
-              >
-                Download avatar
-              </button>
-            </React.Fragment>
-          )}
+                {/*generate avatar button*/}
+                <button
+                  type='button'
+                  className='flex h-12 w-[180px] items-center justify-center rounded bg-yellow-300 font-bold text-blue-800'
+                  onClick={() => {
+                    window.open(downloadUrl, '_blank');
+                    window.location.href = '/upload';
+                  }}
+                >
+                  Download avatar
+                </button>
+              </React.Fragment>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
