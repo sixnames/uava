@@ -7,6 +7,11 @@ const Layout: React.FC = ({ children }) => {
         <h1 className='mb-4 text-3xl'>UAVA</h1>
         <p>Russian warship, go f@ck yourself!</p>
         {children}
+        <div className='mt-8'>
+          <a href='https://github.com/sixnames/uava' target='_blank' rel='noreferrer'>
+            Github
+          </a>
+        </div>
       </div>
     </div>
   );
