@@ -3,8 +3,9 @@ import Layout from '../../components/Layout';
 import { ActionFunction, LoaderFunction, redirect, useLoaderData } from 'remix';
 import { deleteFromCloudinary, getCloudinaryImageUrl } from '../../utils/cloudinary.server';
 import { avaSize, defaultCropSize } from '../../configs/common';
-import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
+import ReactCrop, { PixelCrop } from 'react-image-crop';
 import { Form, useTransition } from '@remix-run/react';
+import queryString from 'query-string';
 
 const defaultCrop: PixelCrop = {
   unit: 'px',
@@ -40,9 +41,9 @@ export const loader: LoaderFunction = async ({ params }) => {
   return data;
 };
 
+// delete uploaded image from cloudinary
 export const action: ActionFunction = async ({ params }) => {
   const avatarFileName = `${params.avatarFileName}`;
-  // delete uploaded image from cloudinary
   await deleteFromCloudinary(avatarFileName);
   return redirect(`/upload`);
 };
@@ -50,12 +51,10 @@ export const action: ActionFunction = async ({ params }) => {
 const CropRoute = () => {
   const transition = useTransition();
   const { imageUrl, avatarFileName } = useLoaderData<CropRouteDataInterface>();
-  const [crop, setCrop] = React.useState<Crop>();
-  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
+  const [crop, setCrop] = React.useState<PixelCrop>(defaultCrop);
   const [previewSizes, setPreviewSizes] = React.useState<Sizes>(defaultSizes);
-  const [downloadUrl, setDownloadUrl] = React.useState<string>('');
 
-  // set initial state on image load
+  // set preview image sizes
   React.useEffect(() => {
     const image = new Image();
     image.src = imageUrl;
@@ -68,18 +67,16 @@ const CropRoute = () => {
           height: cropImageRect.height,
         });
       }
-      setCrop(defaultCrop);
-      setCompletedCrop(defaultCrop);
     };
   }, [imageUrl]);
 
   // get download url
-  React.useEffect(() => {
+  const downloadUrl = React.useMemo<string>(() => {
     // get initial values
-    const cropWidth = completedCrop?.width || defaultCrop.width;
-    const cropHeight = completedCrop?.height || defaultCrop.height;
-    const cropPositionX = completedCrop?.x === 0 ? 0 : completedCrop?.x || defaultCrop.x;
-    const cropPositionY = completedCrop?.y === 0 ? 0 : completedCrop?.y || defaultCrop.y;
+    const cropWidth = crop?.width || defaultCrop.width;
+    const cropHeight = crop?.height || defaultCrop.height;
+    const cropPositionX = crop?.x === 0 ? 0 : crop?.x || defaultCrop.x;
+    const cropPositionY = crop?.y === 0 ? 0 : crop?.y || defaultCrop.y;
 
     // count preview sizes
     const imageWidth = (previewSizes.width * avaSize) / cropWidth;
@@ -90,34 +87,32 @@ const CropRoute = () => {
     const positionY = (cropPositionY * imageHeight) / previewSizes.height;
 
     // set download url
-    const queryParams = `x=${positionX}&y=${positionY}&width=${imageWidth}&height=${imageHeight}`;
-    setDownloadUrl(`/crop/${avatarFileName}.png?${queryParams}`);
-  }, [avatarFileName, completedCrop, previewSizes]);
+    const queryParams = queryString.stringify({
+      x: positionX,
+      y: positionY,
+      width: imageWidth,
+      height: imageHeight,
+    });
+    return `/crop/${avatarFileName}.png?${queryParams}`;
+  }, [avatarFileName, crop, previewSizes]);
 
   return (
     <Layout>
       <div className='relative'>
         {/*crop*/}
         <div className='mt-8 pb-4'>
-          <ReactCrop
-            aspect={1}
-            crop={crop}
-            onChange={(_, percentCrop) => setCrop(percentCrop)}
-            onComplete={(c) => setCompletedCrop(c)}
-          >
+          <ReactCrop aspect={1} crop={crop} onChange={(pixelCrop) => setCrop(pixelCrop)}>
             <img id={'crop-image'} className='block' alt='Crop me' src={imageUrl} />
           </ReactCrop>
         </div>
 
         {/*controls*/}
-        <div className='sticky left-0 bottom-0 bg-gray-200 py-4 dark:bg-gray-800'>
+        <div className='sticky left-0 bottom-0 rounded-lg bg-gray-400 p-4 dark:bg-gray-700'>
           <div className='flex flex-wrap items-center justify-center gap-4'>
-            {transition.submission?.method === 'DELETE' ? (
-              <div>Removing image...</div>
-            ) : transition.submission?.method === 'POST' ? (
+            {transition.state === 'submitting' ? (
               <div>
                 <div className='text-center'>
-                  <div className='text-xl'>Generating avatar...</div>
+                  <div className='text-xl'>Removing image...</div>
                   <div>Please wait</div>
                 </div>
               </div>
